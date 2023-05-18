@@ -1,0 +1,78 @@
+Thoughts
++ Large changes in delay in nearby stations real?
+-> Quality control measure?
++ Polarity flips are assumed to affect all channels. Is this a good assumption?
+-> Should check this...
+-> Polarity flips should be consistent across stations (not event-specific)
+-> After initial picks, find all polarity flips (simple CCF with stack)
+-> After finishing initial pick set, automate a reanalysis of polarity
+
+IRON STATION
++ Always an outlier...why?
++ Sometimes predicted polarity reversal
+
+EVT509
++ Nearly radially polarised? Difficult to pick.
+
+EVT72
++ Shifted all initial/original arrival times by 10s
++ Set initial data.meanDelay = 10 just for this event
+
+EVT697
++ Both S and sS picks made
++ I only re-picked S
+
+Normally try to pick first main peak of waveform. These events I picked earlier.
+EVT3
+EVT26
+EVT32
+EVT37
+EVT48
+EVT50
+EVT52
+EVT53
+EVT58
+EVT61
+EVT328 (later phase?)
+EVT287 (just PZ channel early)
+EVT523 (just final PZ channel early)
+EVT160 (just final PZ channel early)
+EVT891 (second MCC picked early)
+
+Anomalous Phases
++ EVT328
+-> May have picked sS
+
+
+Specific Station-Event Pairs Removed due to incomplete data
++ SHUK: No vertical channel
+-> Unfortunately, this station recorded 164 events.
+
++ FS16B: No orientation data
+-> EVT509, EVT535, EVT587, EVT603, EVT606, EVT634, EVT657, EVT668
+
++ J48A: No orientation data, bad vertical channel
+-> EVT756, EVT763, EVT773, EVT783, EVT788, EVT800, EVT828, EVT829, EVT830
+
++ FS10B: No orientation data
+-> EVT606
+
++ FS17B: no orientation
+-> EVT580, EVT606, EVT610, EVT634, 
+
++ FS14B: No orientation
+-> EVT634, EVT654
+
++ G04B: No orientation; vertical channel failed
+511, 528, 538, 541, 562, 610, 615, 654, 660, 666, 673
+
++ GB350: No orientation
+-> 321
+
++ FS08B: No orientation
+
+Reversed Polarity Stations
++ These should be re-investigated
++ If a station is found to have one polarity reversal, it should always be reversed?
++ Easily identify polarity reversals be aligning waveforms and computing CCF
+
