@@ -1,0 +1,12 @@
+# Domain Width: Longitude (deg.) Latitude (deg.)
+ 18.06112  27.23534
+# Domain Origin: Longitude (deg.) Latitude (deg.) Azimuth (deg.)
+   0.00000    0.00000    0.00000
+# Radial thickness: Depth (km)
+ 705.5220
+# Number of elements: NX NY NZ
+  128   192    36
+# Background model: Name
+iasp91_dsm
+# Burried domain? Logical
+.false.

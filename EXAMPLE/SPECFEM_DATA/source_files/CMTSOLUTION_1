@@ -1,0 +1,13 @@
+PDE 2000 01 01 00 00 00 50 0 50 6.5 6.5 SYNTHETIC
+event name:       SYNTHETIC
+time shift:       0.0
+half duration:      15.000000
+latorUTM:       50.000000
+longorUTM:       0.000000
+depth:       50.000000
+Mrr:       6.130990e+25
+Mtt:       -1.848720e+24
+Mpp:       -5.946118e+25
+Mrt:       6.146675e+24
+Mrp:       3.485952e+25
+Mtp:       -1.048461e+25
