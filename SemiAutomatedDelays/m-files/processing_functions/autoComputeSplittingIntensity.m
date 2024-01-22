@@ -1,23 +1,24 @@
 function F = autoComputeSplittingIntensity(evtid,ATT,TT1D,event,station,dataDir,refModel)
 
 % Define analysis parameters
-sampFreq     = 40; % Sampling frequency (Hz)
-timeWindow   = 600; % Length of seismograms (s)
-corners      = [1/33, 1/12]; % Corner frequencies for Butterworth filter (Hz)
-order        = 3; % Order of Butterworth filter
+sampFreq     = 10; %40; % Sampling frequency (Hz)
+timeWindow   = 120; %600; % Length of seismograms (s)
+corners      = [1/40, 1/10]; %[1/33, 1/12]; % Corner frequencies for Butterworth filter (Hz)
+order        = 2; %3; % Order of Butterworth filter
 tf_zerophase = true; % Use zero-phase filter?
 % Splitting Intensity Analysis Parameters
 tstart  = 0; % Window start time (s)
 tlength = 15; % Window length (s)
-inorm   = 1;
+inorm   = 3; %1;
 % Window limits for polarisation recomputation
 tf_pol = false;
-pmin   = -5;
-pmax   = 20;
+pmin   = 0;
+pmax   = 15;
 % Arrival identification parameters
 CHN = 'PZ'; % Original channel picked
-FLT = [0,1/33,1/12,3,0]; % Original filter used
-WND = 10; % Only original picks should have a window parameter of 0 s
+FLT = [0, 1/40, 1/10, 2, 0]; %[0,1/33,1/12,3,0]; % Original filter used
+WND = 8; %10; % Only original picks should have a window parameter of 0 s
+tf_specfem = true;
 
 % Get phase
 aPhase = unique(ATT.phase(ATT.event == evtid));
@@ -34,9 +35,34 @@ else
     end
 end
 
-% Load filtered seismograms
-data = loadSeis_commonEvent(dataDir,evtid,event,station,sampFreq,...
-    timeWindow,refModel,aPhase,corners,order,tf_zerophase);
+if tf_specfem
+    sfEvent = sf_read_events(dataDir);
+    sfStation = sf_read_stations(dataDir);
+    data = sf_load_bin_seis(sfStation,sfEvent,evtid,{'BXX','BXY','BXZ'},dataDir,'semv',timeWindow*[-0.5, 0.5],...
+        'filtopts',[corners(1),corners(2),order,tf_zerophase],'tf_rotate',true,...
+        'tf_moveout',true,'ttap',[],'aPhase',aPhase,'aModel',refModel);
+    % Modify data structure
+    data.t = data.t(:)';
+    data = rmfield(data,'event');
+    data.event.id         = evtid;
+    data.event.originTime = datenum(event.originDate(event.id == evtid)); % DATENUM
+    data.event.latitude   = event.latitude(event.id == evtid);
+    data.event.longitude  = event.longitude(event.id == evtid);
+    data.event.depth      = event.depth(event.id == evtid);
+    if data.ntrace == length(station.name)
+        data.nsta = data.ntrace;
+        data = rmfield(data,'ntrace');
+    else
+        error('Missing traces!');
+    end
+    [~,lis] = ismember(data.station,station.name);
+    data.network = station.network(lis);
+    data.refTime = data.event.originTime + (data.tt1D./(60*60*24));
+    data.seis = permute(data.seis,[1,3,2]);
+else
+    data = loadSeis_commonEvent(dataDir,evtid,event,station,sampFreq,...
+        timeWindow,refModel,aPhase,corners,order,tf_zerophase);
+end
 
 %% Subset Seismograms: Only use those with picks
 keep = (ATT.event == evtid) & strcmp(ATT.channel,CHN)...

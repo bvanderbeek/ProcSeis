@@ -1,30 +1,33 @@
 function [ATT,data] = manRecomputeDelays(evtid)
 
 % Define analysis parameters
-dataDir      = '/Users/bvanderbeek/research/SemiAutomatedDelays/data'; % Data directory
-theEvent     = [dataDir,'/event_cascadia.mat']; % Event structure
-theStation   = [dataDir,'/station_cascadia.mat']; % Station structure
-theATT       = [dataDir,'/ATT_cascadia.mat']; % The arrival time table
-theBound     = [dataDir,'/PB_Cascadia.mat']; % Plate boundaries structure
-ichan        = 1; % Initial channel to pick (1 = T, 2 = R, 3 = Z)
-sampFreq     = 40; % Desired Sampling frequency (Hz)
-timeWindow   = 600; % Length of seismograms to load (s)
-refModel     = 'ak135'; % Reference model for 1D travel-time predictions
+tf_specfem   = true;
+dataDir      = '/Users/bvanderbeek/research/NEWTON/IASP91_Test'; %'/Users/bvanderbeek/research/SemiAutomatedDelays/data'; % Data directory
+theEvent     = [dataDir,'/event.mat']; %_cascadia.mat']; % Event structure
+theStation   = [dataDir,'/station.mat']; %_cascadia.mat']; % Station structure
+theATT       = [dataDir,'/ATT.mat']; %_cascadia.mat']; % The arrival time table
+theBound     = ''; %[dataDir,'/PB_Cascadia.mat']; % Plate boundaries structure
+ichan        = 1; % Initial channel to pick (1 = T, 2 = R,Q, 3 = Z,L)
+sampFreq     = 10; %40; % Desired Sampling frequency (Hz)
+timeWindow   = 120; % 600; % Length of seismograms to load (s)
+refModel     = 'iasp91'; %'/Users/bvanderbeek/research/software/TauP_Toolkit/custom_models/iasp91_NoCrust.tvel'; %'ak135'; % Reference model for 1D travel-time predictions
+SeismicPhase = 'S'; % A seismic phase to analyse
 filtType     = 0; % Filter type (0 = Butterworth; only option currently implemented)
-corners      = [1/33, 1/12]; % Corner frequencies for Butterworth filter (Hz)
-order        = 3; % Order of Butterworth filter
+corners      = [1/40, 1/10]; %[1/33, 1/12]; % Corner frequencies for Butterworth filter (Hz)
+order        = 2; %3; % Order of Butterworth filter
 tf_zerophase = true; % Use zero-phase filter?
 % If true, initial delays are set to existing picks. If false, initial
 % delays are assumed to be zero.
 tf_initialAlignment = false;
 % Analysis window parameters. Two time windows.
-twin1min = -5;
-twin1max = 15;
+twin1min = 0; %-5;
+twin1max = 15; %15;
 twin2min = 0;
-twin2max = 10;
+twin2max = 8; %10;
 % Polarisation analysis window
-pmin     = -5;
-pmax     = 20;
+pmin     = 0; % -5
+pmax     = 15; % 20
+tf_pelv = false; % Include elevation when rotating into PAZ?
 % Multi-channel Cross-correlation parameters
 nmax_mcc        = 20; % Maximum number of iterations
 tol_mcc         = 2/sampFreq; % Tolerance for MCC (exit when delays change by less than tol)
@@ -32,12 +35,17 @@ tf_weighted_mcc = false; % Use correlation-coefficient weighted MCC?
 % Auto save updated arrival time table at end?
 tf_autoSave = true;
 % Set environment variables
-setenv('TAUPJAR','/Users/bvanderbeek/research/software/TauP-2.4.5/lib/TauP-2.4.5.jar');
+setenv('TAUPJAR','/Users/bvanderbeek/research/software/TauP_Toolkit/TauP-2.4.5/lib/TauP-2.4.5.jar');
 % Add required paths
 addpath /Users/bvanderbeek/research/SemiAutomatedDelays/contrib/mk_rd_mseed/
 % Figure directories
-tmpDir   = [dataDir,'/EVT',num2str(evtid),'/tmpFigs'];
-figDir   = [dataDir,'/EVT',num2str(evtid)];
+if tf_specfem
+    tmpDir   = [dataDir,'/SEIS/CMTSOLUTION_',num2str(evtid),'/tmpFigs'];
+    figDir   = [dataDir,'/SEIS/CMTSOLUTION_',num2str(evtid)];
+else
+    tmpDir   = [dataDir,'/EVT',num2str(evtid),'/tmpFigs'];
+    figDir   = [dataDir,'/EVT',num2str(evtid)];
+end
 % Make temporary figure directory
 [status,msg] = mkdir(tmpDir); %#ok No warning for existing directory
 
@@ -56,7 +64,7 @@ aPhase = unique(ATT.phase(ATT.event == evtid));
 if length(aPhase) == 1
     aPhase = aPhase{1};
 elseif isempty(aPhase)
-    error('Event has no pre-existing picks!');
+    aPhase = SeismicPhase;
 else
     if evtid == 697
         warning('Assuming S for event 697.');
@@ -67,8 +75,34 @@ else
 end
 
 % Load filtered seismograms
-data = loadSeis_commonEvent(dataDir,evtid,event,station,sampFreq,...
-    timeWindow,refModel,aPhase,corners,order,tf_zerophase);
+if tf_specfem
+    sfEvent = sf_read_events(dataDir);
+    sfStation = sf_read_stations(dataDir);
+    data = sf_load_bin_seis(sfStation,sfEvent,evtid,{'BXX','BXY','BXZ'},dataDir,'semv',timeWindow*[-0.5, 0.5],...
+        'filtopts',[corners(1),corners(2),order,tf_zerophase],'tf_rotate',true,...
+        'tf_moveout',true,'ttap',[],'aPhase',aPhase,'aModel',refModel);
+    % Modify data structure
+    data.t = data.t(:)';
+    data = rmfield(data,'event');
+    data.event.id         = evtid;
+    data.event.originTime = datenum(event.originDate(event.id == evtid)); % DATENUM
+    data.event.latitude   = event.latitude(event.id == evtid);
+    data.event.longitude  = event.longitude(event.id == evtid);
+    data.event.depth      = event.depth(event.id == evtid);
+    if data.ntrace == length(station.name)
+        data.nsta = data.ntrace;
+        data = rmfield(data,'ntrace');
+    else
+        error('Missing traces!');
+    end
+    [~,lis] = ismember(data.station,station.name);
+    data.network = station.network(lis);
+    data.refTime = data.event.originTime + (data.tt1D./(60*60*24));
+    data.seis = permute(data.seis,[1,3,2]);
+else
+    data = loadSeis_commonEvent(dataDir,evtid,event,station,sampFreq,...
+        timeWindow,refModel,aPhase,corners,order,tf_zerophase);
+end
 
 % Define analysis windows for ALIGNED traces
 awin_1 = (data.t >= twin1min) & (data.t <= twin1max);
@@ -262,24 +296,26 @@ data.meanDelay = pickStack(data.t,squeeze(data.seis(:,:,ichan)),data.meanDelay,d
 %% 3) Second Iterative Multi-channel Cross-correlation
 figFile = [tmpDir,'/','2_SecondAlignment_Transverse'];
 
-% Call iterative MCC
-fprintf('\n Starting second iterative MCC...\n');
-[DT,ddt,ibad,H] = call_iterateMCC(data.t,squeeze(data.seis(:,:,ichan)),data.fs,...
-    data.meanDelay,data.DT,awin_2,twin2min,twin2max,...
-    tf_weighted_mcc,tol_mcc,nmax_mcc,tlim);
-fprintf(' ...Completed second iterative MCC \n');
-fprintf([' Minimum/Maximum Relative Delays (ms): ',num2str(round(1000*min(DT))),'/',num2str(round(1000*max(DT))),'\n']);
-
-% Evaluate alignment
-[data,flag] = continueAlignment(data,DT,ddt,ibad,H,figFile);
-if flag == 0
-    fprintf('\n Exiting program. \n');
-    return
+if ~((twin2min == twin1min) && (twin2max == twin1max))
+    % Call iterative MCC
+    fprintf('\n Starting second iterative MCC...\n');
+    [DT,ddt,ibad,H] = call_iterateMCC(data.t,squeeze(data.seis(:,:,ichan)),data.fs,...
+        data.meanDelay,data.DT,awin_2,twin2min,twin2max,...
+        tf_weighted_mcc,tol_mcc,nmax_mcc,tlim);
+    fprintf(' ...Completed second iterative MCC \n');
+    fprintf([' Minimum/Maximum Relative Delays (ms): ',num2str(round(1000*min(DT))),'/',num2str(round(1000*max(DT))),'\n']);
+    
+    % Evaluate alignment
+    [data,flag] = continueAlignment(data,DT,ddt,ibad,H,figFile);
+    if flag == 0
+        fprintf('\n Exiting program. \n');
+        return
+    end
 end
 
 %% Update Arrival Time Table
 
-CHN = {'T','R','Z'};
+CHN = data.channel; % {'T','R','Z'};
 POL = {[0,0],[90,0],[0,90]};
 FLT = [filtType,corners,order,~tf_zerophase];
 ATT = update_ATT(ATT,data,CHN{ichan},aPhase,POL{ichan},FLT,twin2max-twin2min);
@@ -303,52 +339,54 @@ end
 % let's check the polarity of the secondary channels before doing
 % polarisation analysis.
 
-% Select non-picked channels
-jchan = [1,2,3];
-jchan(ichan) = [];
-
-% Align traces
-S1 = align_traces(data.t,squeeze(data.seis(:,:,jchan(1))),data.meanDelay + data.DT);
-S2 = align_traces(data.t,squeeze(data.seis(:,:,jchan(2))),data.meanDelay + data.DT);
-% Scale amplitudes
-S1 = scale_traces(awin_1,S1,1);
-S2 = scale_traces(awin_1,S2,1);
-% Stack traces
-D1 = mean(S1,1);
-D2 = mean(S2,1);
-% Zero-lag correlation with stacked trace
-iflip_1 = S1(:,awin_1)*(D1(:,awin_1)')./sqrt(sum(S1(:,awin_1).^2,2).*sum(D1(:,awin_1).^2,2));
-iflip_1 = iflip_1 < min(mean(iflip_1 - 1), -std(iflip_1));
-iflip_2 = S2(:,awin_1)*(D2(:,awin_1)')./sqrt(sum(S2(:,awin_1).^2,2).*sum(D2(:,awin_1).^2,2));
-iflip_2 = iflip_2 < min(mean(iflip_2 - 1), -std(iflip_2));
-% Plot check
-H = figure;
-subplot(2,1,1); hold on;
-plot(data.t,S1);
-plot(data.t,S1(iflip_1,:),'-r','linewidth',2);
-plot(data.t,D1,'-k','linewidth',2);
-plot([twin1min*ones(2,1), twin1max*ones(2,1)],...
+if ~tf_specfem
+    % Select non-picked channels
+    jchan = [1,2,3];
+    jchan(ichan) = [];
+    
+    % Align traces
+    S1 = align_traces(data.t,squeeze(data.seis(:,:,jchan(1))),data.meanDelay + data.DT);
+    S2 = align_traces(data.t,squeeze(data.seis(:,:,jchan(2))),data.meanDelay + data.DT);
+    % Scale amplitudes
+    S1 = scale_traces(awin_1,S1,1);
+    S2 = scale_traces(awin_1,S2,1);
+    % Stack traces
+    D1 = mean(S1,1);
+    D2 = mean(S2,1);
+    % Zero-lag correlation with stacked trace
+    iflip_1 = S1(:,awin_1)*(D1(:,awin_1)')./sqrt(sum(S1(:,awin_1).^2,2).*sum(D1(:,awin_1).^2,2));
+    iflip_1 = iflip_1 < min(mean(iflip_1 - 1), -std(iflip_1));
+    iflip_2 = S2(:,awin_1)*(D2(:,awin_1)')./sqrt(sum(S2(:,awin_1).^2,2).*sum(D2(:,awin_1).^2,2));
+    iflip_2 = iflip_2 < min(mean(iflip_2 - 1), -std(iflip_2));
+    % Plot check
+    H = figure;
+    subplot(2,1,1); hold on;
+    plot(data.t,S1);
+    plot(data.t,S1(iflip_1,:),'-r','linewidth',2);
+    plot(data.t,D1,'-k','linewidth',2);
+    plot([twin1min*ones(2,1), twin1max*ones(2,1)],...
         max(abs(D1(:)))*[-1,-1; 1,1],'-g','linewidth',2);
-box on; grid on; axis tight; title(num2str(jchan(1))); xlim(tlim);
-subplot(2,1,2); hold on;
-plot(data.t,S2);
-plot(data.t,S2(iflip_2,:),'-r','linewidth',2);
-plot(data.t,D2,'-k','linewidth',2);
-plot([twin1min*ones(2,1), twin1max*ones(2,1)],...
+    box on; grid on; axis tight; title(num2str(jchan(1))); xlim(tlim);
+    subplot(2,1,2); hold on;
+    plot(data.t,S2);
+    plot(data.t,S2(iflip_2,:),'-r','linewidth',2);
+    plot(data.t,D2,'-k','linewidth',2);
+    plot([twin1min*ones(2,1), twin1max*ones(2,1)],...
         max(abs(D2(:)))*[-1,-1; 1,1],'-g','linewidth',2);
-box on; grid on; axis tight; title(num2str(jchan(2))); xlim(tlim);
-figure(H);
-
-% Option to flip polarities of suspected traces
-r = 10;
-while ~(r == 0) && ~(r == 1)
-    r = input(' Change polarity of suspected traces (yes = 1; no = 0)? ');
+    box on; grid on; axis tight; title(num2str(jchan(2))); xlim(tlim);
+    figure(H);
+    
+    % Option to flip polarities of suspected traces
+    r = 10;
+    while ~(r == 0) && ~(r == 1)
+        r = input(' Change polarity of suspected traces (yes = 1; no = 0)? ');
+    end
+    if r == 1
+        data.seis(iflip_1,:,jchan(1)) = -data.seis(iflip_1,:,jchan(1));
+        data.seis(iflip_2,:,jchan(2)) = -data.seis(iflip_2,:,jchan(2));
+    end
+    close(H);
 end
-if r == 1
-    data.seis(iflip_1,:,jchan(1)) = -data.seis(iflip_1,:,jchan(1));
-    data.seis(iflip_2,:,jchan(2)) = -data.seis(iflip_2,:,jchan(2));
-end
-close(H);
 
 %% Polarisation Analysis
 figFile = [tmpDir,'/','3_PolarisationResults'];
@@ -362,7 +400,12 @@ TRZ = squeeze(mean(TRZ,1))';
 
 % Polarisation analysis
 [azm,elv] = compute_polarization(TRZ(1,pwin),TRZ(2,pwin),TRZ(3,pwin));
-PML       = roty(elv)*rotz(-azm)*TRZ;
+if tf_pelv
+    PML = roty(elv)*rotz(-azm)*TRZ;
+else
+    elv = 0;
+    PML = rotz(-azm)*TRZ;
+end
 
 % Evaluate polarisation alignment
 H = figure;
@@ -451,23 +494,25 @@ data.meanDelay = pickStack(data.t,Sp,data.meanDelay,data.DT,awin_1,tlim);
 %% Polarisation: Second Iterative Multi-channel Cross-correlation
 figFile = [tmpDir,'/','5_SecondAlignment_Polarisation'];
 
-% Call iterative MCC
-fprintf('\n Polarisation: starting second iterative MCC...\n');
-[DT,ddt,ibad,H] = call_iterateMCC(data.t,Sp,data.fs,data.meanDelay,data.DT,...
-    awin_2,twin2min,twin2max,tf_weighted_mcc,tol_mcc,nmax_mcc,tlim);
-fprintf(' ...Completed second iterative MCC \n');
-fprintf([' Minimum/Maximum Relative Delays (ms): ',num2str(round(1000*min(DT))),'/',num2str(round(1000*max(DT))),'\n']);
-
-% Evaluate alignment
-[data,flag] = continueAlignment(data,DT,ddt,ibad,H,figFile);
-if flag == 0
-    fprintf('\n Exiting program. \n');
-    return
-end
-
-% Delete bad traces from principle coordinate seismograms
-if sum(ibad) > 0
-    Sp(ibad,:) = [];
+if ~((twin2min == twin1min) && (twin2max == twin1max))
+    % Call iterative MCC
+    fprintf('\n Polarisation: starting second iterative MCC...\n');
+    [DT,ddt,ibad,H] = call_iterateMCC(data.t,Sp,data.fs,data.meanDelay,data.DT,...
+        awin_2,twin2min,twin2max,tf_weighted_mcc,tol_mcc,nmax_mcc,tlim);
+    fprintf(' ...Completed second iterative MCC \n');
+    fprintf([' Minimum/Maximum Relative Delays (ms): ',num2str(round(1000*min(DT))),'/',num2str(round(1000*max(DT))),'\n']);
+    
+    % Evaluate alignment
+    [data,flag] = continueAlignment(data,DT,ddt,ibad,H,figFile);
+    if flag == 0
+        fprintf('\n Exiting program. \n');
+        return
+    end
+    
+    % Delete bad traces from principle coordinate seismograms
+    if sum(ibad) > 0
+        Sp(ibad,:) = [];
+    end
 end
 
 %% Plot Delays

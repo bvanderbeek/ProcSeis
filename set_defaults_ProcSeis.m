@@ -7,14 +7,18 @@ sf_toolbox = 'contrib/sf_toolbox'; %
 
 % Default Parameter Structure
 % Data Panel
-% IRIS Fetch Example Data
+% MATLAB IRIS Fetch Example Data
 % Defaults.DataDir      = 'EXAMPLE/IRISFETCH_MAT_DATA'; % Directory with seismic data
 % Defaults.PickDir      = 'EXAMPLE/IRISFETCH_MAT_DATA/PICKS'; % Directory where picks will be saved
 % Defaults.Ext          = 'mat'; % File extension on seismograms
-% SPECFEM Example Data
-Defaults.DataDir      = 'EXAMPLE/SPECFEM_DATA'; % Directory with seismic data
-Defaults.PickDir      = 'EXAMPLE/SPECFEM_DATA/PICKS'; % Directory where picks will be saved
-Defaults.Ext          = 'semv'; % File extension on seismograms
+% % SPECFEM Example Data
+% Defaults.DataDir      = 'EXAMPLE/SPECFEM_DATA'; % Directory with seismic data
+% Defaults.PickDir      = 'EXAMPLE/SPECFEM_DATA/PICKS'; % Directory where picks will be saved
+% Defaults.Ext          = 'semv'; % File extension on seismograms
+% Miniseed Example data
+Defaults.DataDir      = 'EXAMPLE/MSEED_DATA'; % Directory with seismic data
+Defaults.PickDir      = 'EXAMPLE/MSEED_DATA'; % Directory where picks will be saved
+Defaults.Ext          = 'mseed'; % File extension on seismograms
 
 Defaults.ChannelList  = 'BXX,BXY,BXZ'; % Channels to load in order given!
 Defaults.RefModel     = 'iasp91'; % Reference 1D model for initial moveout correction

@@ -205,9 +205,6 @@ elseif tf_rotate
     R.ista        = (1:data.ntrace)';
 end
 if tf_rotate && (data.nchan > 1)
-    if data.nchan == 3
-        disp('ROTATING TO TQL NOT TRZ!');
-    end
     for ii = 1:data.ntrace
         if data.nchan == 2
             F = [squeeze(data.seis(ii,1,:))'; squeeze(data.seis(ii,2,:))'; zeros(1,data.nsamp)];
@@ -217,9 +214,11 @@ if tf_rotate && (data.nchan > 1)
             data.seis(ii,1,:) = F(1,:)';
             data.seis(ii,2,:) = F(2,:)';
             data.channel = {'T','R'};
+            disp('ROTATED SEISMOGRAMS TO TR-COORDINATES!');
         elseif data.nchan == 3
             % To rotate into ray coordinates. Note that this does not effect
             % transverse channel amplitudes
+            % Extract 3-component trace in East-North-Vertical Coordinates
             F = [squeeze(data.seis(ii,1,:))'; squeeze(data.seis(ii,2,:))'; squeeze(data.seis(ii,3,:))'];
             % Rotate by +baz since baz is measured CW from N (rotz angle is CCW
             % from +x). Channel 1 is the transverse and channel 2 is radial.
@@ -229,6 +228,7 @@ if tf_rotate && (data.nchan > 1)
             data.seis(ii,2,:) = F(2,:)';
             data.seis(ii,3,:) = F(3,:)';
             data.channel = {'T','Q','L'};
+            disp('ROTATED SEISMOGRAMS TO TQL-COORDINATES!');
         end
     end
 end

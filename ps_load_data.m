@@ -4,42 +4,7 @@ DataDir = ps_get_value(handles,'DataDir');
 Ext     = ps_get_value(handles,'Ext');
 
 if strcmp(Ext,'mseed')
-    % Define event data
-    handles.event.id         = zeros(nsrc,1); % Event id (sequentially numbered from file name)
-    handles.event.origintime = zeros(nsrc,1); % Event origin time (all SPECFEM sources start at 0 s)
-    handles.event.latitude   = zeros(nsrc,1); % Event latitude (dd)
-    handles.event.longitude  = zeros(nsrc,1); % Event longitude (dd)
-    handles.event.depth      = zeros(nsrc,1); % Event depth measured with respect to model surface (km)
-    handles.event.Mw         = zeros(nsrc,1); % Event moment magnitude
-    
-    % Define station date
-    handles.station.id        = cell(nrec,1); % Station ID
-    handles.station.longitude = zeros(nrec,1); % (dec. deg)
-    handles.station.latitude  = zeros(nrec,1); % (dec. deg)
-    handles.station.elevation = zeros(nrec,1); % Receiver elevation (km)...this is the SPECFEM z-coordinate measured with respect to model surface
-    handles.station.depth     = zeros(nrec,1); % Receiver depth with respect to model surface (km)
-    
-    % Define seismic data
-    % Extract some information from GUI menues
-    [ChannelList,MinTime,MaxTime,aModel,aPhase] = ps_get_value(handles,...
-        'ChannelList','MinTime','MaxTime','RefModel','RefPhase');
-    handles.SeisDat.event   = 0;
-    handles.SeisDat.channel = ChannelList; % Cell array of channel names that are loaded
-    handles.SeisDat.fs      = Fs; % Sampling frequency that is common to all traces
-    handles.SeisDat.ntrace  = NTRACES; % Number of seismic traces loaded
-    handles.SeisDat.nchan   = NCHAN; % Number of channels in each trace
-    handles.SeisDat.nsamp   = 1 + round(Fs*(MaxTime - MinTime)); % Number of samples in each trace
-    handles.SeisDat.t       = MinTime + (1/Fs)*linspace(0,handles.SeisDat.nsamp - 1,handles.SeisDat.nsamp)'; % Reduced time vector for all traces
-    handles.SeisDat.phase   = repmat({aPhase},handles.SeisDat.ntrace); % Seismic phase reference for reduced time
-    % Allocate variables to be determined
-    handles.SeisDat.station   = cell(handles.SeisDat.ntrace,1); % Station corresponding to each trace
-    handles.SeisDat.delta     = zeros(handles.SeisDat.ntrace,1); % Source-receiver range for each trace (deg.)
-    handles.SeisDat.baz       = zeros(handles.SeisDat.ntrace,1); % Source-receiver back-azimuth for each trace (deg.)
-    handles.SeisDat.tt1D      = zeros(handles.SeisDat.ntrace,1); % TauP predicted time
-    handles.SeisDat.rayP      = zeros(handles.SeisDat.ntrace,1); % TauP predicted ray parameter
-    handles.SeisDat.incidence = zeros(handles.SeisDat.ntrace,1); % TauP predicted incidence angle
-    handles.SeisDat.seis      = zeros(handles.SeisDat.ntrace,handles.SeisDat.nchan,handles.SeisDat.nsamp); % Seismogram array
-    
+    handles = ps_load_mseed_data(handles);
 elseif strcmp(Ext,'mat')
     % Load events structure
     theEvents = dir([DataDir,'/Events_*']);
@@ -174,4 +139,6 @@ else
     handles.station = sf_read_stations(DataDir);
     handles.event   = sf_read_events(DataDir);
     handles         = ps_load_SFseis(handles);
+    
+    keyboard
 end

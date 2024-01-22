@@ -1736,7 +1736,7 @@ fprintf('\n Running MCC...\n');
 seis     = squeeze(handles.SeisDat.seis(:,ichan,:));
 seis     = seis(~handles.picks.tf_bad,:);
 dt_trace = handles.picks.DT(~handles.picks.tf_bad);
-warning('USING COVARIANCE MATRIX DETERMINANT MINIMISATION!');
+% warning('USING COVARIANCE MATRIX DETERMINANT MINIMISATION!');
 % tic
 % [DT,ddt] = MCC_MDC(t,handles.SeisDat.fs,seis,dt_trace,wlength,tbuff,ttaper,handles.ChkNormAmp.Value);
 % toc
