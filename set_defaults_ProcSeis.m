@@ -1,10 +1,5 @@
 %% Default Parameters for ProcSeis
 
-% Required paths
-taup_jar   = 'contrib/TauP-2.4.5.jar'; % TauP jar-file
-taup_tools = 'contrib/TauP_MatWrapper'; % TauP matlab wrappers
-sf_toolbox = 'contrib/sf_toolbox'; % 
-
 % Default Parameter Structure
 % Data Panel
 % MATLAB IRIS Fetch Example Data

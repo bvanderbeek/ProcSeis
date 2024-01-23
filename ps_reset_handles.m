@@ -12,13 +12,12 @@ if handles.tf_reset_defaults
     % Define default parameters
     run('set_defaults_ProcSeis.m');
     
-    % Define TauP environment variable
-    setenv('TAUPJAR',taup_jar);
-    
     % Add required matlab tools to path
-    addpath(taup_tools);
-    addpath([sf_toolbox,'/m-files']);
-    addpath([sf_toolbox,'/m-files/utils']);
+    procseis_path = mfilename('fullpath');
+    procseis_path = strsplit(procseis_path,'ps_reset_handles');
+    addpath(genpath([procseis_path{1},'contrib']));
+    % Define TauP environment variable
+    setenv('TAUPJAR',[procseis_path{1},'contrib/TauP-2.4.5.jar']);
     
     % Set GUI Default Values
     Name  = fieldnames(Defaults);
