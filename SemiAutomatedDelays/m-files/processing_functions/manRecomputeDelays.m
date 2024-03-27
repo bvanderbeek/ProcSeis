@@ -1,33 +1,33 @@
 function [ATT,data] = manRecomputeDelays(evtid)
 
 % Define analysis parameters
-tf_specfem   = true;
-dataDir      = '/Users/bvanderbeek/research/NEWTON/IASP91_Test'; %'/Users/bvanderbeek/research/SemiAutomatedDelays/data'; % Data directory
-theEvent     = [dataDir,'/event.mat']; %_cascadia.mat']; % Event structure
-theStation   = [dataDir,'/station.mat']; %_cascadia.mat']; % Station structure
-theATT       = [dataDir,'/ATT.mat']; %_cascadia.mat']; % The arrival time table
-theBound     = ''; %[dataDir,'/PB_Cascadia.mat']; % Plate boundaries structure
+tf_specfem   = false; % (true) SPECFEM binary seismograms; (false) mseed seismograms
+dataDir      = '/Users/bvanderbeek/research/CASCADIA/Waveforms_S'; % Data directory
+theEvent     = [dataDir,'/event_cascadia.mat']; % Event structure
+theStation   = [dataDir,'/station_cascadia.mat']; % Station structure
+theATT       = [dataDir,'/ATT_cascadia.mat']; % The arrival time table
+theBound     = [dataDir,'/PB_Cascadia.mat']; % Plate boundaries structure
 ichan        = 1; % Initial channel to pick (1 = T, 2 = R,Q, 3 = Z,L)
-sampFreq     = 10; %40; % Desired Sampling frequency (Hz)
-timeWindow   = 120; % 600; % Length of seismograms to load (s)
-refModel     = 'iasp91'; %'/Users/bvanderbeek/research/software/TauP_Toolkit/custom_models/iasp91_NoCrust.tvel'; %'ak135'; % Reference model for 1D travel-time predictions
+sampFreq     = 40; % Desired Sampling frequency (Hz)
+timeWindow   = 600; % Length of seismograms to load (s)
+refModel     = 'ak135'; % Reference model for 1D travel-time predictions
 SeismicPhase = 'S'; % A seismic phase to analyse
 filtType     = 0; % Filter type (0 = Butterworth; only option currently implemented)
-corners      = [1/40, 1/10]; %[1/33, 1/12]; % Corner frequencies for Butterworth filter (Hz)
-order        = 2; %3; % Order of Butterworth filter
+corners      = [1/33, 1/12]; % Corner frequencies for Butterworth filter (Hz)
+order        = 3; % Order of Butterworth filter
 tf_zerophase = true; % Use zero-phase filter?
 % If true, initial delays are set to existing picks. If false, initial
 % delays are assumed to be zero.
 tf_initialAlignment = false;
 % Analysis window parameters. Two time windows.
-twin1min = 0; %-5;
-twin1max = 15; %15;
+twin1min = -5;
+twin1max = 15;
 twin2min = 0;
-twin2max = 8; %10;
+twin2max = 10;
 % Polarisation analysis window
-pmin     = 0; % -5
-pmax     = 15; % 20
-tf_pelv = false; % Include elevation when rotating into PAZ?
+pmin     = -5;
+pmax     = 20;
+tf_pelv = true; % Include elevation when rotating into PAZ?
 % Multi-channel Cross-correlation parameters
 nmax_mcc        = 20; % Maximum number of iterations
 tol_mcc         = 2/sampFreq; % Tolerance for MCC (exit when delays change by less than tol)
@@ -100,6 +100,7 @@ if tf_specfem
     data.refTime = data.event.originTime + (data.tt1D./(60*60*24));
     data.seis = permute(data.seis,[1,3,2]);
 else
+    % Loads data into TRZ components
     data = loadSeis_commonEvent(dataDir,evtid,event,station,sampFreq,...
         timeWindow,refModel,aPhase,corners,order,tf_zerophase);
 end
